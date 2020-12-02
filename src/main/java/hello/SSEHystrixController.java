@@ -40,6 +40,22 @@ public class SSEHystrixController {
         return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
     }
 
+    @Async
+    public void consumeHystrixSSE() {
+        ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<ServerSentEvent<String>>() {
+        };
+        Flux<ServerSentEvent<String>> eventStream = client.get()
+                .uri("/hystrixStream/events")
+                .retrieve()
+                .bodyToFlux(type);
+        Gson gson = new Gson();
+        eventStream.subscribe(
+                content -> consumeDataAndPublish(gson, content),
+                //logger.info("Current time: {} - Received SSE: name[{}], id [{}], content[{}] ", LocalTime.now(), content.event(), content.id(), content.data()),
+                error -> logger.error("Error receiving SSE: {}", error),
+                () -> logger.info("Completed!!!"));
+    }
+
     /**
      *  PLEASE add resilence4j to hystrix mapping here and add aggregation here as well
      *  such as rollup , aggregation here. I have added only sample of few data here
@@ -59,19 +75,15 @@ public class SSEHystrixController {
         queue.add(new Resilence4jSSEEvent(content.id(), content.event(), resilence4jCBEvents));
     }
 
-    @Async
-    public void consumeHystrixSSE() {
-        ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<ServerSentEvent<String>>() {
-        };
-        Flux<ServerSentEvent<String>> eventStream = client.get()
-                .uri("/hystrixStream/events")
-                .retrieve()
-                .bodyToFlux(type);
+    //emit new metrics..
+    @GetMapping(path = "/stream-sse")
+    public Flux<ServerSentEvent<String>> streamEvents() {
         Gson gson = new Gson();
-        eventStream.subscribe(
-                content -> consumeDataAndPublish(gson, content),
-                //logger.info("Current time: {} - Received SSE: name[{}], id [{}], content[{}] ", LocalTime.now(), content.event(), content.id(), content.data()),
-                error -> logger.error("Error receiving SSE: {}", error),
-                () -> logger.info("Completed!!!"));
+        return Flux.zip(Flux.fromStream(queue.stream()), Flux.interval(Duration.ofSeconds(1)))
+                .map(sequence -> ServerSentEvent.<String>builder()
+                        .id((queue.peek().getId()) != null ? queue.peek().getId() : sequence.getT2() + "")
+                        .event(queue.peek().getEvent())
+                        .data(gson.toJson(queue.poll().getData()).replace("Resilence4jCBEvents", ""))
+                        .build());
     }
 }

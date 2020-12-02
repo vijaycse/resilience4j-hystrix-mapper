@@ -76,19 +76,6 @@ public class SSEController {
                 () -> logger.info("Completed!!!"));
     }
 
-    @GetMapping(path = "/stream-sse")
-    public Flux<ServerSentEvent<String>> streamEvents() {
-        Gson gson = new Gson();
-        return Flux.zip(Flux.fromStream(queue.stream()), Flux.interval(Duration.ofSeconds(1)))
-                .map(sequence -> ServerSentEvent.<String>builder()
-                        .id((queue.peek().getId()) != null ? queue.peek().getId() : sequence.getT2() + "")
-                        .event(queue.peek().getEvent())
-                        .data(gson.toJson(queue.poll().getData()).replace("Resilence4jCBEvents", ""))
-                        .build());
-    }
-
-
-
     private void consumeDataAndPublish(Gson gson, ServerSentEvent<String> content) {
         logger.info("Received SSE event");
         HystrixCircuitBreakerEvent hystrixCircuitBreakerEvent = gson.fromJson(content.data(), HystrixCircuitBreakerEvent.class);
