@@ -34,11 +34,11 @@ public class SSEHystrixController {
 
 
 
-    @GetMapping("/fire-hystrix-sse-client")
-    public String launchHystrixSSEFromSSEWebClient() {
-        consumeHystrixSSE();
-        return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
-    }
+//    @GetMapping("/fire-hystrix-sse-client")
+//    public String launchHystrixSSEFromSSEWebClient() {
+//        consumeHystrixSSE();
+//        return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
+//    }
 
     @Async
     public void consumeHystrixSSE() {
@@ -78,6 +78,7 @@ public class SSEHystrixController {
     //emit new metrics..
     @GetMapping(path = "/stream-sse")
     public Flux<ServerSentEvent<String>> streamEvents() {
+        consumeHystrixSSE();
         Gson gson = new Gson();
         return Flux.zip(Flux.fromStream(queue.stream()), Flux.interval(Duration.ofSeconds(1)))
                 .map(sequence -> ServerSentEvent.<String>builder()
