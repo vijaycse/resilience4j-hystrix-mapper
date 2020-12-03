@@ -1,8 +1,6 @@
 package hello;
 
 import com.google.gson.Gson;
-import model.HystrixCircuitBreakerEvent;
-import model.Resilence4jCBEvents;
 import model.Resilence4jSSEEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,15 +75,6 @@ public class SSEController {
     }
 
     private void consumeDataAndPublish(Gson gson, ServerSentEvent<String> content) {
-        logger.info("Received SSE event");
-        HystrixCircuitBreakerEvent hystrixCircuitBreakerEvent = gson.fromJson(content.data(), HystrixCircuitBreakerEvent.class);
-        Resilence4jCBEvents resilence4jCBEvents = new Resilence4jCBEvents();
-        resilence4jCBEvents.setCircuitBreakerName(hystrixCircuitBreakerEvent.getOrNull().getCircuitBreakerRecentEvent().getCircuitBreakerName());
-        resilence4jCBEvents.setCurrentState(hystrixCircuitBreakerEvent.getOrNull().getCurrentState());
-        resilence4jCBEvents.setFailureRateThreshold(hystrixCircuitBreakerEvent.getOrNull().getFailureRateThreshold());
-        resilence4jCBEvents.setSlowCallRateThreshold(hystrixCircuitBreakerEvent.getOrNull().getSlowCallRateThreshold());
-        resilence4jCBEvents.setNumberOfSuccessfulCalls(hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfSuccessfulCalls());
-        queue.add(new Resilence4jSSEEvent(content.id(), content.event(), resilence4jCBEvents));
     }
 
 }

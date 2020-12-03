@@ -2,12 +2,11 @@ package hello;
 
 import com.google.gson.Gson;
 import model.HystrixCircuitBreakerEvent;
-import model.Resilence4jCBEvents;
+import model.Resilience4jCBEvent;
 import model.Resilence4jSSEEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,10 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
-import reactor.util.function.Tuple2;
 
 import java.time.Duration;
-import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -56,23 +55,35 @@ public class SSEHystrixController {
                 () -> logger.info("Completed!!!"));
     }
 
+    private final HashSet<String> openStates = new HashSet<>(Arrays.asList(
+            "OPEN",
+            "FORCED_OPEN"
+    ));
+
     /**
-     *  PLEASE add resilence4j to hystrix mapping here and add aggregation here as well
-     *  such as rollup , aggregation here. I have added only sample of few data here
+     * Map the resilience4j data to hystrix equivalents and add aggregation such as rollup.
+     *
      * @param gson
      * @param content
      */
     private void consumeDataAndPublish(Gson gson, ServerSentEvent<String> content) {
         logger.info("Received SSE event");
         HystrixCircuitBreakerEvent hystrixCircuitBreakerEvent = gson.fromJson(content.data(), HystrixCircuitBreakerEvent.class);
-        Resilence4jCBEvents resilence4jCBEvents = new Resilence4jCBEvents();
-        resilence4jCBEvents.setCircuitBreakerName(hystrixCircuitBreakerEvent.getOrNull().getCircuitBreakerRecentEvent().getCircuitBreakerName());
-        resilence4jCBEvents.setCurrentState(hystrixCircuitBreakerEvent.getOrNull().getCurrentState());
-        resilence4jCBEvents.setFailureRateThreshold(hystrixCircuitBreakerEvent.getOrNull().getFailureRateThreshold());
-        resilence4jCBEvents.setSlowCallRateThreshold(hystrixCircuitBreakerEvent.getOrNull().getSlowCallRateThreshold());
-        resilence4jCBEvents.setNumberOfSuccessfulCalls(hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfSuccessfulCalls());
-        resilence4jCBEvents.setCreationTime(LocalTime.now().toString());
-        queue.add(new Resilence4jSSEEvent(content.id(), content.event(), resilence4jCBEvents));
+
+        Resilience4jCBEvent resilience4JCBEvent = new Resilience4jCBEvent();
+        resilience4JCBEvent.name = hystrixCircuitBreakerEvent.getOrNull().getCircuitBreakerRecentEvent().getCircuitBreakerName();
+        resilience4JCBEvent.group = resilience4JCBEvent.name;
+        resilience4JCBEvent.isCircuitBreakerOpen = openStates.contains(hystrixCircuitBreakerEvent.getOrNull().getCurrentState());
+        resilience4JCBEvent.rollingCountFailure = hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfFailedCalls();
+        resilience4JCBEvent.rollingCountShortCircuited = hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfNotPermittedCalls();
+        resilience4JCBEvent.rollingCountSuccess = hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfSuccessfulCalls();
+        resilience4JCBEvent.rollingCountTimeout = hystrixCircuitBreakerEvent.getOrNull().getMetrics().getNumberOfSlowFailedCalls();
+        resilience4JCBEvent.requestCount = resilience4JCBEvent.rollingCountSuccess
+                + resilience4JCBEvent.rollingCountFailure
+                + resilience4JCBEvent.rollingCountShortCircuited
+                + resilience4JCBEvent.rollingCountTimeout;
+
+        queue.add(new Resilence4jSSEEvent(content.id(), content.event(), resilience4JCBEvent));
     }
 
     //emit new metrics..

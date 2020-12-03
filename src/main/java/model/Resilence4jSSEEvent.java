@@ -2,7 +2,7 @@ package model;
 
 public class Resilence4jSSEEvent {
 
-    public Resilence4jSSEEvent(String Id, String event, Resilence4jCBEvents data){
+    public Resilence4jSSEEvent(String Id, String event, Resilience4jCBEvent data){
         this.data = data;
         this.event = event;
         this.id = id;
@@ -24,17 +24,17 @@ public class Resilence4jSSEEvent {
         this.event = event;
     }
 
-    public Resilence4jCBEvents getData() {
+    public Resilience4jCBEvent getData() {
         return data;
     }
 
-    public void setData(Resilence4jCBEvents data) {
+    public void setData(Resilience4jCBEvent data) {
         this.data = data;
     }
 
     private String id;
     private String event;
-    private Resilence4jCBEvents data;
+    private Resilience4jCBEvent data;
 
     @Override
     public String toString() {
