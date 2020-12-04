@@ -6,6 +6,8 @@ import model.Resilience4jCBEvent;
 import model.Resilence4jSSEEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.scheduling.annotation.Async;
@@ -22,12 +24,14 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 @RestController
+@Configuration
 @RequestMapping(value = "/consume-hystrix-sse")
 public class SSEHystrixController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SSEHystrixController.class);
-    private final WebClient client = WebClient.create("http://localhost:5050/circuitbreaker");
+    @Value( "${stream.url}" )
+    private String resilence4jStreamUrl;
 
+    private static final Logger logger = LoggerFactory.getLogger(SSEHystrixController.class);
 
     private final Queue<Resilence4jSSEEvent> queue = new LinkedBlockingQueue<>();
 
@@ -39,8 +43,9 @@ public class SSEHystrixController {
 //        return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
 //    }
 
-//    @Async
-    public void consumeHystrixSSE() {
+ //   @Async
+    public void consumeHystrixSSE()  {
+        WebClient client = WebClient.create(resilence4jStreamUrl);
         ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<ServerSentEvent<String>>() {
         };
         Flux<ServerSentEvent<String>> eventStream = client.get()
@@ -53,6 +58,11 @@ public class SSEHystrixController {
                 //logger.info("Current time: {} - Received SSE: name[{}], id [{}], content[{}] ", LocalTime.now(), content.event(), content.id(), content.data()),
                 error -> logger.error("Error receiving SSE: {}", error),
                 () -> logger.info("Completed!!!"));
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private final HashSet<String> openStates = new HashSet<>(Arrays.asList(
