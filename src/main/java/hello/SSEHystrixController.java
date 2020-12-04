@@ -39,7 +39,7 @@ public class SSEHystrixController {
 //        return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
 //    }
 
-    @Async
+//    @Async
     public void consumeHystrixSSE() {
         ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<ServerSentEvent<String>>() {
         };
