@@ -13,4 +13,4 @@ COPY --from=build /src/build/libs/gs-reactive-rest-service-*.jar /resilience4j-h
 USER 65534
 EXPOSE 9080
 
-CMD ["java", "-jar", "/resilience4j-hystrix-mapper.jar"]
+ENTRYPOINT ["java", "-jar", "/resilience4j-hystrix-mapper.jar"]
