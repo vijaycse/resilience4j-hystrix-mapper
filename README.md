@@ -1,5 +1,7 @@
 === How to run locally?
 
+Setup property to point to local SSE emitter stream.url=<localhost:5050>/emitterurl
+
 Run the app - `./gradlew bootRun`
 
 Start event listener - `curl http://localhost:9080/consume-hystrix-sse/fire-hystrix-sse-client`
