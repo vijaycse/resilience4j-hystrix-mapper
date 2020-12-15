@@ -1,6 +1,6 @@
 === How to run locally?
 
-Setup property to point to local SSE emitter stream.url=<localhost:5050>/emitterurl
+Setup property to point to local SSE emitter `stream.url=<localhost:5050>/emitterurl`
 
 Run the app - `./gradlew bootRun`
 
