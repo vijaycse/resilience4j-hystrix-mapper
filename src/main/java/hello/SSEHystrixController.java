@@ -35,14 +35,7 @@ public class SSEHystrixController {
 
     private final Queue<Resilence4jSSEEvent> queue = new LinkedBlockingQueue<>();
 
-
-
-//    @GetMapping("/fire-hystrix-sse-client")
-//    public String launchHystrixSSEFromSSEWebClient() {
-//        consumeHystrixSSE();
-//        return "LAUNCHED hystrix EVENT CLIENT!!! Check the logs...";
-//    }
-
+    
  //   @Async
     public void consumeHystrixSSE()  {
         WebClient client = WebClient.create(resilence4jStreamUrl);

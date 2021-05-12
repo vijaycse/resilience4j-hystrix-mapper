@@ -24,10 +24,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class SSEController {
 
     private static final Logger logger = LoggerFactory.getLogger(SSEController.class);
-    private final WebClient client = WebClient.create("http://localhost:5050/circuitbreaker");
+    private final WebClient client = WebClient.create("http://localhost:9080/actuator/");
 
 
-    private final Queue<Resilence4jSSEEvent> queue = new LinkedBlockingQueue<>();
+    private final Queue<String> queue = new LinkedBlockingQueue<>();
 
 
     //testing purpose
@@ -40,11 +40,17 @@ public class SSEController {
     }
 
     //testing purpose
-    @GetMapping(path = "/stream-sse-size", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamEventsFlux() {
-        return Flux.just(queue)
-                .map(queue1 -> queue1.toString());
-    }
+    @GetMapping(path = "/stream-sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>>  streamEventsFlux() {
+//        return Flux.just(queue)
+//                .map(queue1 -> queue1.toString());
+            return Flux.zip(Flux.fromStream(queue.stream()), Flux.interval(Duration.ofSeconds(1)))
+                    .map(seq -> ServerSentEvent.<String>builder()
+                            .id(seq.getT2().toString())
+                    .event(seq.getT2()+"someevent")
+                    .data(queue.poll())
+                    .build());
+        }
 
     //testing purpose
     @GetMapping("/stream-sse-event-size")
@@ -63,9 +69,10 @@ public class SSEController {
         ParameterizedTypeReference<ServerSentEvent<String>> type = new ParameterizedTypeReference<ServerSentEvent<String>>() {
         };
         Flux<ServerSentEvent<String>> eventStream = client.get()
-                .uri("/stream/events")
+                .uri("stream-circuitbreaker-events/backendA")
                 .retrieve()
-                .bodyToFlux(type);
+                .bodyToFlux(type)
+                .repeat();
         Gson gson = new Gson();
         eventStream.subscribe(
                 content -> consumeDataAndPublish(gson, content),
@@ -75,6 +82,9 @@ public class SSEController {
     }
 
     private void consumeDataAndPublish(Gson gson, ServerSentEvent<String> content) {
+        String data = content.data()!=null ? content.data() : content.event();
+        System.out.println(" data " + data);
+        queue.add(data);
     }
 
 }
